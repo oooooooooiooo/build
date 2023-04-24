@@ -1,0 +1,61 @@
+name: cache
+on:
+  # push:
+  #   branches:
+  #     - '*'
+
+  # pull_request:
+  #   branches:
+  #     - '*'
+  workflow_dispatch:
+  # schedule:
+  #   - cron: '0 0 * * *'
+
+env:
+  CACHE_NUMBER: 0  # increase to reset cache manually
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            label: osx-x64
+            runtime: osx-x64
+            prefix: /Users/runner/miniconda3/envs/my-env
+          - os: osx-arm64
+            label: osx-arm64
+            runtime: osx-arm64
+            prefix: /Users/runner/miniconda3/envs/my-env            
+    name: ${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup Mambaforge
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+            miniforge-variant: Mambaforge
+            miniforge-version: latest
+            activate-environment: my-env
+            use-mamba: true
+
+      - name: Set cache date
+        run: echo "DATE=$(date +'%Y%m%d')" >> $GITHUB_ENV
+
+      - uses: actions/cache@v2
+        with:
+          path: ${{ matrix.prefix }}
+          key: ${{ matrix.label }}-conda-${{ hashFiles('environment.yml') }}-${{ env.CACHE_NUMBER }}
+        id: cache
+
+      - name: Update environment
+        run: mamba env update -n my-env -f environment.yml
+        if: steps.cache.outputs.cache-hit != 'true'
+
+      - name: Save cache
+        uses: actions/cache@v2
+        with:
+          path: ${{ matrix.prefix }}
+          key: ${{ matrix.label }}-conda-${{ hashFiles('environment.yml') }}-${{ env.CACHE_NUMBER }}
+      

@@ -1,0 +1,16 @@
+name: my-env
+
+channels:
+  - conda-forge
+
+dependencies:
+  - python >=3.8
+  - pip
+  - numpy
+  - opencv >=4.6
+  - Pillow
+  - pandas
+  - PyMySQL
+  - requests
+  - urllib3
+  

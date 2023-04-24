@@ -1,0 +1,62 @@
+name: osx-arm64
+on: 
+  workflow_dispatch:
+defaults:
+  run:
+    shell: bash
+
+env:
+  CACHE_NUMBER: 0  # increase to reset cache manually
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: osx-arm64
+            label: osx-arm64
+            runtime: osx-arm64
+            prefix: /Users/runner/miniconda3/envs/my-env     
+    name: ${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: checkout build code
+        uses: actions/checkout@v3
+        with:
+          repository: oooooooooiooo/macked-build
+          ssh-key: ${{ secrets.SSH_KEY }}
+          fetch-depth: 0
+                
+      - name: Setup MacOS          
+        run: |        
+          wget -O rclone.zip https://downloads.rclone.org/v1.62.2/rclone-v1.62.2-osx-amd64.zip
+          unzip -d /usr/local/bin -j rclone.zip
+          rm -rf rclone.zip          
+
+      - name: Setup Mambaforge
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+            miniforge-variant: Mambaforge
+            miniforge-version: latest
+            activate-environment: my-env
+            use-mamba: true
+
+      - name: Set cache date
+        run: echo "DATE=$(date +'%Y%m%d')" >> $GITHUB_ENV
+
+      - uses: actions/cache@v2
+        with:
+          path: ${{ matrix.prefix }}
+          key: ${{ matrix.label }}-conda-${{ hashFiles('environment.yml') }}-${{ env.CACHE_NUMBER }}
+        id: cache
+
+      - name: Set zsh as default shell
+        run: |
+          sudo chsh -s $(which zsh) root
+          sudo chsh -s $(which zsh) $(whoami)
+
+      - name: Start SSH session
+        uses: luchihoratiu/debug-via-ssh@main
+        with:
+          NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
+          SSH_PASS: ${{ secrets.SSH_PASS }}
